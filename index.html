@@ -520,7 +520,7 @@ function liveParts(event) {
     period === 5 ? "Pênaltis" : "";
   let clock = st.displayClock || "";
   if (!/[1-9]/.test(clock) && (!period || period <= 2)) {
-    const mins = Math.floor((Date.now() - new Date(event.date).getTime()) / 60000);
+    const mins = Math.floor((Date.now() - new Date(event.espnDate || event.date).getTime()) / 60000);
     if (period === 2 ? mins >= 60 && mins < 125 : mins >= 1 && mins < 50) {
       clock = period === 2 ? Math.min(Math.max(mins - 15, 46), 90) + "'" : Math.min(mins, 45) + "'";
     }
@@ -762,19 +762,19 @@ async function getJSON(url, ms = 15000, headers = {}) {
   }
 }
 
-let rangeSupported = true;
+const rangeBad = new Set();
 
 async function fetchEspn(id, past = PAST_DAYS, future = FUTURE_DAYS) {
   const tag = events => (events || []).map(event => ({...event, leagueId:id, source:"espn"}));
   const base = `${ESPN_BASE}/${id}/scoreboard`;
 
-  if (rangeSupported) {
+  if (!rangeBad.has(id)) {
     const range = `${ymd(dayOffset(-past))}-${ymd(dayOffset(future))}`;
     try {
       const data = await getJSON(`${base}?dates=${range}${past + future > 30 ? "&limit=1000" : ""}`);
       if ((data.events || []).length) return tag(data.events);
     } catch (error) {
-      if (error.status === 400) rangeSupported = false;
+      if (error.status === 400) rangeBad.add(id);
     }
   }
 
@@ -948,6 +948,7 @@ function mergeOverlay(fdEvent, espnEvent) {
   const hasScore = e.home.score != null && e.away.score != null;
   return {
     ...fdEvent,
+    espnDate: espnEvent.date,
     status: espnEvent.status,
     competitions: [{
       competitors: fdEvent.competitions[0].competitors.map(c => ({

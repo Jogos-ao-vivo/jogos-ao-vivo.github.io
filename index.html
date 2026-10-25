@@ -803,8 +803,10 @@ function normalizeFD(m, fallbackCode) {
   if (!leagueId || m.status === "CANCELLED") return null;
 
   const st = m.status;
-  const live = st === "IN_PLAY" || st === "PAUSED" || st === "LIVE";
-  const done = st === "FINISHED" || st === "AWARDED";
+  const rawLive = st === "IN_PLAY" || st === "PAUSED" || st === "LIVE";
+  const tooOld = rawLive && Date.now() - new Date(m.utcDate).getTime() > 4 * 3600000;
+  const live = rawLive && !tooOld;
+  const done = st === "FINISHED" || st === "AWARDED" || tooOld;
   const state = live ? "in" : done ? "post" : "pre";
   const minute = m.minute;
   const period = live && st !== "PAUSED" && minute != null ? (minute > 45 ? 2 : 1) : undefined;
@@ -836,7 +838,7 @@ function normalizeFD(m, fallbackCode) {
       type: {
         state,
         completed: done,
-        name: st === "PAUSED" ? "STATUS_HALFTIME" : st,
+        name: tooOld ? "FINISHED" : st === "PAUSED" ? "STATUS_HALFTIME" : st,
         detail: st === "PAUSED" ? "Intervalo" : "Em andamento"
       },
       period,

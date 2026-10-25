@@ -518,7 +518,13 @@ function liveParts(event) {
     period === 2 ? "2º tempo" :
     (period === 3 || period === 4) ? "Prorrogação" :
     period === 5 ? "Pênaltis" : "";
-  const clock = st.displayClock || "";
+  let clock = st.displayClock || "";
+  if (!/[1-9]/.test(clock) && (!period || period <= 2)) {
+    const mins = Math.floor((Date.now() - new Date(event.date).getTime()) / 60000);
+    if (period === 2 ? mins >= 60 && mins < 125 : mins >= 1 && mins < 50) {
+      clock = period === 2 ? Math.min(Math.max(mins - 15, 46), 90) + "'" : Math.min(mins, 45) + "'";
+    }
+  }
   if (!name && !clock) return pill(statusDetailPt(type.detail));
   return (name ? `<span class="t-date">${esc(name)}</span>` : "") + (clock ? pill(clock) : "");
 }
